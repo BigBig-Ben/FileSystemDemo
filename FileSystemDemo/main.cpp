@@ -333,6 +333,12 @@ void cd_absolute(string target)
 			FCB* temp = *fit;
 			if (temp->name == target_sub && temp->get_type() == 1)
 			{
+				if (temp->get_mode() == 0 && role == "user")
+				{
+					cerr << "Error: You have no authority to access the directory " << target << endl;
+					current = pre_path;		//go back to previous path
+					return;
+				}
 				current = temp;
 				found = true;
 				break;
@@ -340,7 +346,7 @@ void cd_absolute(string target)
 		}
 		if (!found)
 		{
-			cout << "Error: There is no directory named " << target << endl;
+			cerr << "Error: There is no directory named " << target << endl;
 			current = pre_path;		//go back to previous path
 		}
 	}
@@ -387,6 +393,12 @@ void cd_relative(string target)
 			FCB* temp = *fit;
 			if (temp->name == target_sub && temp->get_type() == 1)
 			{
+				if (temp->get_mode() == 0 && role == "user")
+				{
+					cerr << "Error: You have no authority to access the directory " << target << endl;
+					current = pre_path;		//go back to previous path
+					return;
+				}
 				current = temp;
 				found = true;
 				break;
@@ -394,7 +406,7 @@ void cd_relative(string target)
 		}
 		if (!found)
 		{
-			cout << "Error: There is no directory named " << target << endl;
+			cerr << "Error: There is no directory named " << target << endl;
 			current = pre_path;		//go back to previous path
 		}
 	}
