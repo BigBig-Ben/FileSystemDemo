@@ -12,10 +12,24 @@ Description: the main file of file system Demo
 Version: 1.1
 Date: 2019-12-29
 Description: change dispose from inner FCB to maincpp and improve the authority mode with super
+
+Version: 1.2
+Date: 2020-1-6
+Description: add delete confirm
+
+Version: 1.3
+Date: 2020-1-7
+Description: add initial help, and add namecheck of copy and move
+
+Version: 1.4
+Date: 2020-1-8
+Description: add font color function to identify folder and file
+			 repair rename bug
 ****************************/
 #include<iostream>
 #include<string>
 #include<iomanip>
+#include<Windows.h>
 #include"file_pipe.h"
 using namespace std;
 
@@ -53,11 +67,22 @@ vector<string> split(const string& str, const string& delim) {
 }
 
 /*
+Summary: change font color
+Parameter:
+	x: the number of font color
+*/
+void color(int x)
+{
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(h, x);
+}
+
+/*
 Summary: init the graphic and role, load the fcb-tree and bit table
 */
 void init()
 {
-	cout << "*** WELCOME TO USE FILE SYSTEM DEMO ***" << endl;
+	cout << "  ***** WELCOME TO USE FILE SYSTEM DEMO *****  " << endl;
 	FCBPipe *fcbpipe = new FCBPipe();
 	DataPipe *datapipe = new DataPipe();
 	//load fcb-tree
@@ -68,6 +93,27 @@ void init()
 	datapipe->open();
 	datapipe->read_bittable(bit_table);
 	delete fcbpipe, datapipe;
+	cout << "  You can use the File System Demo using the commands blow : " << endl;
+	cout << left << setw(10) << "  cd" << "change working directory or go to upper directory" << endl;
+	cout << left << setw(10) << "  pwd" << "print working directory" << endl;
+	cout << left << setw(10) << "  help" << "show the help document" << endl;
+	cout << left << setw(10) << "  clear" << "clear the screen" << endl;
+	cout << left << setw(10) << "  history" << "show the command history" << endl;
+	cout << left << setw(10) << "  exit" << "exit the file system" << endl;
+	cout << left << setw(10) << "  mkdir" << "make an new directory " << endl;
+	cout << left << setw(10) << "  rmdir" << "remove the directory " << endl;
+	cout << left << setw(10) << "  rndir" << "rename the directory " << endl;
+	cout << left << setw(10) << "  ls" << "list the files and directoris at working directory" << endl;
+	cout << left << setw(10) << "  chmod" << "change the mode of a file or directory" << endl;
+	cout << left << setw(10) << "  vi" << "create a file or read a file" << endl;
+	cout << left << setw(10) << "  rm" << "remove the file " << endl;
+	cout << left << setw(10) << "  rn" << "rename the file " << endl;
+	cout << left << setw(10) << "  mv" << "move the directory or file " << endl;
+	cout << left << setw(10) << "  cp" << "copy the directory or file " << endl;
+	cout << left << setw(10) << "  super" << "change role to super to get more authorities" << endl;
+	cout << left << setw(10) << "  desuper" << "change role to user to operate safely" << endl;
+	cout << left << setw(10) << "  disk" << "show the memory usage condition" << endl;
+	cout << endl;
 }
 
 /*
@@ -75,7 +121,7 @@ Summary: quit the system ,store the fcb-tree & bit table
 */
 void exit()
 {
-	cout << "*** THANK YOU FOR USING FILE SYSTEM DEMO ***" << endl;
+	cout << "  ***** THANK YOU FOR USING FILE SYSTEM DEMO *****" << endl;
 	FCBPipe *fcbpipe = new FCBPipe();
 	DataPipe *datapipe = new DataPipe();
 	//store the fcb-tree
@@ -85,7 +131,7 @@ void exit()
 	datapipe->write_bittable(bit_table);
 	datapipe->close();
 	delete fcbpipe, datapipe;
-	cout << "*** DATA STORE COMPLETE ***" << endl;
+	cout << "  *****         DATA STORE COMPLETE          *****" << endl;
 }
 
 /*
@@ -223,8 +269,8 @@ void help(string op = "all")
 		cout << left << setw(10) << "vi" << left << setw(20) << "file_name" << "edit 'file_name' if it exists, else create a file named 'file_name' and edit it" << endl;
 		cout << left << setw(10) << "rm" << left << setw(20) << "file_name" << "remove the file named 'file_name' which should be excutable" << endl;
 		cout << left << setw(10) << "rn" << left << setw(20) << "old_name new_name" << "rename the file named 'old_name' to 'new_name'" << endl;
-		cout << left << setw(10) << "mv" << left << setw(20) << "d/f_name target" << "move the directory or file named 'd/f_name' to 'target' directory" << endl;
-		cout << left << setw(10) << "cp" << left << setw(20) << "d/f_name target" << "copy the directory or file named 'd/f_name' to 'target' directory" << endl;
+		cout << left << setw(10) << "mv" << left << setw(20) << "source destination" << "move the directory or file named 'source' to 'destination' directory" << endl;
+		cout << left << setw(10) << "cp" << left << setw(20) << "source destination" << "copy the directory or file named 'source' to 'destination' directory" << endl;
 		cout << left << setw(10) << "super" << left << setw(20) << " " << "change role to super to get more authorities" << endl;
 		cout << left << setw(10) << "desuper" << left << setw(20) << " " << "change role to user to operate safely" << endl;
 		cout << left << setw(10) << "disk" << left << setw(20) << " " << "show the memory usage condition" << endl;
@@ -272,10 +318,10 @@ void help(string op = "all")
 		cout << left << setw(10) << "rn" << left << setw(20) << "old_name new_name" << "rename the file named 'old_name' to 'new_name'" << endl;
 	}
 	else if (op == "mv") {
-		cout << left << setw(10) << "mv" << left << setw(20) << "dir/file_name target" << "move the directory or file named 'dir.file_name' to 'target' directory" << endl;
+		cout << left << setw(10) << "mv" << left << setw(20) << "source destination" << "move the directory or file named 'source' to 'destination' directory" << endl;
 	}
 	else if (op == "cp") {
-		cout << left << setw(10) << "cp" << left << setw(20) << "dir/file_name target" << "copy the directory or file named 'dir.file_name' to 'target' directory" << endl;
+		cout << left << setw(10) << "cp" << left << setw(20) << "source destination" << "copy the directory or file named 'source' to 'destination' directory" << endl;
 	}
 	else if (op == "super") {
 		cout << left << setw(10) << "super" << left << setw(20) << " " << "change role to super to get more authorities" << endl;
@@ -421,7 +467,13 @@ void list_simple()
 	vector<FCB*>::iterator it;
 	for (it = subdir.begin(); it < subdir.end(); it++)
 	{
-		cout << (*it)->name << "      ";
+		if ((*it)->get_type() == 1)
+		{
+			color(11);
+			cout << (*it)->name << "      ";
+			color(7);
+		}
+		else cout << (*it)->name << "      ";
 	}
 	cout << endl;
 }
@@ -438,6 +490,8 @@ void list_specific()
 	for (it = subdir.begin(); it < subdir.end(); it++)
 	{
 		FCB fcb = **it;
+		if (fcb.get_type() == 1)
+			color(11);
 		tm time = fcb.touch_time;
 		string _touch_time = to_string(time.tm_year + 1900) + "/" + to_string(time.tm_mon + 1) + "/" + to_string(time.tm_mday) + " "
 			+ to_string(time.tm_hour) + ":" + to_string(time.tm_min);
@@ -453,6 +507,7 @@ void list_specific()
 			cout << (fcb.get_pages().size() - 1) * 1024 + fcb.get_lplength();
 		}
 		cout << endl;
+		color(7);
 	}
 	cout << endl;
 }
@@ -518,7 +573,7 @@ Summary: remove a directory under the working directory which should be empty
 Parameters:
 	dir_name:the directory name
 */
-void remove_dir(string dir_name)	//!!!!!!!!!!!
+void remove_dir(string dir_name)
 {
 	vector<FCB*> subdir = current->subdir;
 	vector<FCB*>::iterator fit;
@@ -537,12 +592,29 @@ void remove_dir(string dir_name)	//!!!!!!!!!!!
 				cout << "Warning: " << dir_name << " is not an empty directory. If you still want to remove it, try to do it with -f " << endl;
 				return;
 			}
-			found = true;
-			//release the data the directory occupied
-			dispose_dir(*fit);
-			//erase it from fcb-tree
-			fit = subdir.erase(fit);
-			break;
+			//delete confirm
+			cout << "Are you sure to remove directory " << dir_name << " ?(Y/N)" << endl;
+			string ans;
+			getline(cin, ans);
+			cin.clear();
+			if (ans == "n" || ans == "N")
+			{
+				return;
+			}
+			else if (ans == "y" || ans == "Y")
+			{
+				found = true;
+				//release the data the directory occupied
+				dispose_dir(*fit);
+				//erase it from fcb-tree
+				fit = subdir.erase(fit);
+				break;
+			}
+			else
+			{
+				cerr << "Confirm input error!" << endl;
+				return;
+			}
 		}
 	}
 	if (!found)
@@ -573,12 +645,29 @@ void remove_dir_force(string dir_name)
 				cerr << "Error: Directory " << dir_name << " cannot be removed because you have no authority" << endl;
 				return;
 			}
-			found = true;
-			//release the data the directory occupied
-			dispose_dir(*fit);
-			//erase it from fcb-tree
-			fit = subdir.erase(fit);
-			break;
+			//delete confirm
+			cout << "Are you sure to remove directory " << dir_name << " ?(Y/N)" << endl;
+			string ans;
+			getline(cin, ans);
+			cin.clear();
+			if (ans == "n" || ans == "N")
+			{
+				return;
+			}
+			else if (ans == "y" || ans == "Y")
+			{
+				found = true;
+				//release the data the directory occupied
+				dispose_dir(*fit);
+				//erase it from fcb-tree
+				fit = subdir.erase(fit);
+				break;
+			}
+			else
+			{
+				cerr << "Confirm input error!" << endl;
+				return;
+			}
 		}
 	}
 	if (!found)
@@ -623,6 +712,15 @@ void rename_dir(string dir_name, string new_name)
 {
 	vector<FCB*> subdir = current->subdir;
 	vector<FCB*>::iterator it;
+	//check if existed
+	for (it = subdir.begin(); it < subdir.end(); it++)
+	{
+		if ((*it)->name == new_name && (*it)->get_type() == 1)
+		{
+			cerr << "Error: Directory " << new_name << " has already existed" << endl;
+			return;
+		}
+	}
 	//find the source file
 	FCB *source = new FCB();
 	bool found = false;		//if found
@@ -749,18 +847,34 @@ void remove(string file_name)
 		if ((*it)->name == file_name && (*it)->get_type() == 0)
 		{
 			//RWX X-bit is 0
-			if ((*it)->get_mode() % 2 == 0 && role == "user") {
+			if ((*it)->get_mode() % 2 == 0 && role == "user") 
+			{
 				cerr << "Error: " << file_name << " cannot be removed because you have no authority" << endl;
 				return;
 			}
-			found = true;
-			file = *it;
-
-			//(*it)->dispose();		//删除fcb和data
-
-			//从subdir中删除dir_name
-			it = subdir.erase(it);
-			break;
+			//delete confirm
+			cout << "Are you sure to remove file " << file_name << " ?(Y/N)" << endl;
+			string ans;
+			getline(cin, ans);
+			cin.clear();
+			if (ans == "n" || ans == "N")
+			{
+				return;
+			}
+			else if (ans == "y" || ans == "Y")
+			{
+				found = true;
+				file = *it;
+				//从subdir中删除dir_name
+				it = subdir.erase(it);
+				break;
+			}
+			else
+			{
+				cerr << "Confirm input error!" << endl;
+				return;
+			}
+			
 		}
 	}
 	if (!found)
@@ -788,6 +902,15 @@ void rename(string old_name, string new_name)
 {
 	vector<FCB*> subdir = current->subdir;
 	vector<FCB*>::iterator it;
+	//check if existed
+	for (it = subdir.begin(); it < subdir.end(); it++)
+	{
+		if ((*it)->name == new_name && (*it)->get_type() == 0)
+		{
+			cerr << "Error: File " << new_name << " has already existed" << endl;
+			return;
+		}
+	}
 	//find the target file
 	bool found = false;		//if found
 	for (it = subdir.begin(); it < subdir.end(); it++)
@@ -831,10 +954,21 @@ void move(string _source, string destination)
 	if (current->get_path() == pre_path->get_path())
 		return;
 	string new_parent = current->get_path();
+	//check if existed
+	vector<FCB*> subs = current->subdir;
+	vector<FCB*>::iterator fit;
+	for (fit = subs.begin(); fit < subs.end(); fit++)
+	{
+		if ((*fit)->name == _source)
+		{
+			cerr << "Error: " << _source << " has already existed in " << destination << endl;
+			current = pre_path;
+			return;
+		}
+	}
 	//find source
 	FCB* source = new FCB();
-	vector<FCB*> subs = pre_path->subdir;
-	vector<FCB*>::iterator fit;
+	subs = pre_path->subdir;
 	bool found = false;
 	for (fit = subs.begin(); fit < subs.end(); fit++)
 	{
@@ -843,11 +977,13 @@ void move(string _source, string destination)
 			//no granted dir
 			if ((*fit)->get_type() == 1 && (*fit)->get_mode() == 0 && role == "user") {
 				cerr << "Error: You have no authority to move the directory named " << _source << endl;
+				current = pre_path;
 				return;
 			}
 			//no granted file
 			if ((*fit)->get_type() == 0 && (*fit)->get_mode() % 2 == 0 && role == "user") {
 				cerr << "Error: You have no authority to move the file named " << _source << endl;
+				current = pre_path;
 				return;
 			}
 			source = *fit;
@@ -858,6 +994,7 @@ void move(string _source, string destination)
 	}
 	if (!found) {
 		cerr << "Error: There is no file or directory named " << _source << endl;
+		current = pre_path;
 		return;
 	}
 	pre_path->subdir = subs;
@@ -881,25 +1018,30 @@ FCB* copy_subdir(FCB* fcb, string _parent)
 	//create a fcb and copy the properties from source to copy_fcb
 	FCB *copy = new FCB(_parent, fcb->name, fcb->get_type());
 	copy->set_mode(fcb->get_mode());
-	cout << "dd" << endl;
-	DataPipe *pipe = new DataPipe();
-	pipe->open(true);
-	//create data-blocks and copy the content from source's data-blocks to copy_fcb's
-	vector<int> pages = fcb->get_pages();
-	vector<int> copy_pages;
-	for (vector<int>::iterator it = pages.begin(); it < pages.end(); it++)
+	//copy file's data
+	if (fcb->get_type() == 0) 
 	{
-		DataBlock *block = new DataBlock();
-		int newpage = find_first_emptypage();
-		pipe->read(block, (*it));
-		block->block_id = newpage;
-		pipe->write(block, newpage);
-		delete block;
-		copy_pages.push_back(newpage);
+		DataPipe *pipe = new DataPipe();
+		pipe->open(true);
+		//create data-blocks and copy the content from source's data-blocks to copy_fcb's
+		vector<int> pages = fcb->get_pages();
+		vector<int> copy_pages;
+		for (vector<int>::iterator it = pages.begin(); it < pages.end(); it++)
+		{
+			DataBlock *block = new DataBlock();
+			int newpage = find_first_emptypage();
+			pipe->read(block, (*it));
+			block->block_id = newpage;
+			pipe->write(block, newpage);
+			delete block;
+			copy_pages.push_back(newpage);
+			bit_table[newpage] = 1;
+		}
+		pipe->close();
+		delete pipe;
+		copy->set_pages(copy_pages);
+		copy->set_lplength(fcb->get_lplength());
 	}
-	pipe->close();
-	delete pipe;
-	copy->set_pages(copy_pages);
 	//copy subdir
 	vector<FCB*> subs = fcb->subdir;
 	if (subs.size() == 0 && fcb->get_type() == 0)	//file
@@ -930,31 +1072,45 @@ void copy(string _source, string destination)
 	if (current->get_path() == pre_path->get_path())
 		return;
 	string new_parent = current->get_path();
+	//check if existed
+	vector<FCB*> subs = current->subdir;
+	vector<FCB*>::iterator fit;
+	for (fit = subs.begin(); fit < subs.end(); fit++)
+	{
+		if ((*fit)->name == _source)
+		{
+			cerr << "Error: " << _source << " has already existed in " << destination << endl;
+			current = pre_path;
+			return;
+		}
+	}
 	//find source
 	FCB* source = new FCB();
-	vector<FCB*> subs = pre_path->subdir;
-	vector<FCB*>::iterator it;
+	subs = pre_path->subdir;
 	bool found = false;
-	for (it = subs.begin(); it < subs.end(); it++)
+	for (fit = subs.begin(); fit < subs.end(); fit++)
 	{
-		if ((*it)->name == _source) {
+		if ((*fit)->name == _source) {
 			found = true;
 			//no granted dir
-			if ((*it)->get_type() == 1 && (*it)->get_mode() == 0 && role == "user") {
+			if ((*fit)->get_type() == 1 && (*fit)->get_mode() == 0 && role == "user") {
 				cerr << "Error: You have no authority to copy the directory named " << _source << endl;
+				current = pre_path;
 				return;
 			}
 			//no granted file
-			if ((*it)->get_type() == 0 && (*it)->get_mode() % 2 == 0 && role == "user") {
+			if ((*fit)->get_type() == 0 && (*fit)->get_mode() % 2 == 0 && role == "user") {
 				cerr << "Error: You have no authority to move the file named " << _source << endl;
+				current = pre_path;
 				return;
 			}
-			source = *it;
+			source = *fit;
 			break;
 		}
 	}
 	if (!found) {
 		cerr << "Error: There is no file or directory named " << _source << endl;
+		current = pre_path;
 		return;
 	}
 	//copy to destination
